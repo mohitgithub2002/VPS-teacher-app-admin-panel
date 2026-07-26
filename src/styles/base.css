@@ -1,0 +1,263 @@
+/* ==========================================================================
+   BASE — reset, document defaults, typography scale, layout primitives
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--wk-font);
+  font-size: var(--wk-body-size);
+  line-height: var(--wk-body-lh);
+  background: var(--wk-bg-page);
+  color: var(--wk-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background var(--wk-dur-base) var(--wk-ease-out);
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+:focus-visible {
+  outline: 3px solid var(--wk-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--wk-radius-xs);
+}
+
+::selection {
+  background: var(--wk-red-100);
+  color: var(--wk-red-900);
+}
+
+/* ---------- Scrollbars — warm, never cold grey --------------------------- */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--wk-ink-300) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--wk-ink-200);
+  border-radius: var(--wk-radius-pill);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--wk-ink-300);
+  background-clip: content-box;
+}
+
+/* ==========================================================================
+   TYPOGRAPHY SCALE
+   Weights 300–700 only. 800 is reserved for the wordmark lockup.
+   Negative tracking above 22px, zero at body sizes, positive for overlines.
+   ========================================================================== */
+
+.wk-display {
+  font-size: var(--wk-display-size);
+  line-height: var(--wk-display-lh);
+  letter-spacing: var(--wk-display-ls);
+  font-weight: var(--wk-weight-bold);
+}
+
+.wk-h1 {
+  font-size: var(--wk-h1-size);
+  line-height: var(--wk-h1-lh);
+  letter-spacing: var(--wk-h1-ls);
+  font-weight: var(--wk-weight-bold);
+}
+
+.wk-h2 {
+  font-size: var(--wk-h2-size);
+  line-height: var(--wk-h2-lh);
+  letter-spacing: var(--wk-h2-ls);
+  font-weight: var(--wk-weight-semibold);
+}
+
+.wk-h3 {
+  font-size: var(--wk-h3-size);
+  line-height: var(--wk-h3-lh);
+  letter-spacing: var(--wk-h3-ls);
+  font-weight: var(--wk-weight-semibold);
+}
+
+.wk-h4 {
+  font-size: var(--wk-h4-size);
+  line-height: var(--wk-h4-lh);
+  letter-spacing: var(--wk-h4-ls);
+  font-weight: var(--wk-weight-semibold);
+}
+
+.wk-h5 {
+  font-size: var(--wk-h5-size);
+  line-height: var(--wk-h5-lh);
+  letter-spacing: var(--wk-h5-ls);
+  font-weight: var(--wk-weight-semibold);
+}
+
+.wk-body-lg {
+  font-size: var(--wk-body-lg-size);
+  line-height: var(--wk-body-lg-lh);
+}
+
+.wk-body {
+  font-size: var(--wk-body-size);
+  line-height: var(--wk-body-lh);
+}
+
+.wk-body-sm {
+  font-size: var(--wk-body-sm-size);
+  line-height: var(--wk-body-sm-lh);
+}
+
+.wk-caption {
+  font-size: var(--wk-caption-size);
+  line-height: var(--wk-caption-lh);
+  color: var(--wk-text-muted);
+}
+
+.wk-overline {
+  font-size: var(--wk-overline-size);
+  letter-spacing: var(--wk-overline-ls);
+  text-transform: uppercase;
+  font-weight: var(--wk-weight-semibold);
+  line-height: 1.4;
+}
+
+/* Tabular figures for money, ratings, counts, distances — so columns align. */
+.wk-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Body measure: 60–75 characters. Never full-bleed paragraphs. */
+.wk-measure {
+  max-width: 68ch;
+}
+
+.wk-text-secondary {
+  color: var(--wk-text-secondary);
+}
+
+.wk-text-muted {
+  color: var(--wk-text-muted);
+}
+
+.wk-text-brand {
+  color: var(--wk-text-brand);
+}
+
+/* ==========================================================================
+   LAYOUT PRIMITIVES
+   ========================================================================== */
+
+.wk-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wk-space-4);
+}
+
+.wk-stack-sm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wk-space-2);
+}
+
+.wk-stack-lg {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wk-space-6);
+}
+
+.wk-row {
+  display: flex;
+  align-items: center;
+  gap: var(--wk-space-3);
+}
+
+.wk-row-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--wk-space-3);
+  flex-wrap: wrap;
+}
+
+.wk-spread {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wk-space-4);
+}
+
+.wk-grow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.wk-grid {
+  display: grid;
+  gap: var(--wk-space-4);
+}
+
+.wk-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.wk-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Horizontal overflow is always owned by an inner container, never the body. */
+.wk-scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
