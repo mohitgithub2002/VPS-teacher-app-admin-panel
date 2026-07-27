@@ -38,7 +38,8 @@ export const keys = {
     ["assignments", params ?? {}] as const,
   subjects: (active?: string) => ["subjects", active ?? "true"] as const,
   chapters: (params?: object) => ["chapters", params ?? {}] as const,
-  subtopics: (chapterId?: number) => ["subtopics", chapterId ?? null] as const,
+  topics: (chapterId?: number) => ["topics", chapterId ?? null] as const,
+  subtopics: (topicId?: number) => ["subtopics", topicId ?? null] as const,
   calendar: (sessionId?: number, params?: object) =>
     ["calendar", sessionId ?? null, params ?? {}] as const,
   effectiveDays: (from: string, to: string) =>
@@ -288,17 +289,63 @@ export function useDeleteChapter() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: (id: number) => adminApi.deleteChapter(id),
-    onSuccess: () => invalidate("chapters", "subtopics", ...PACING_DEPENDENTS),
+    onSuccess: () =>
+      invalidate("chapters", "topics", "subtopics", ...PACING_DEPENDENTS),
+  });
+}
+
+/* ── Topics ──────────────────────────────────────────────────────────────── */
+
+export function useTopics(chapterId?: number) {
+  return useQuery({
+    queryKey: keys.topics(chapterId),
+    queryFn: () => adminApi.listTopics(chapterId as number, "all"),
+    enabled: typeof chapterId === "number",
+  });
+}
+
+export function useCreateTopic() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (data: {
+      chapterId: number;
+      name: string;
+      displayOrder?: number;
+    }) => adminApi.createTopic(data),
+    onSuccess: () => invalidate("topics", "chapters", ...PACING_DEPENDENTS),
+  });
+}
+
+export function useUpdateTopic() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: { name?: string; displayOrder?: number; isActive?: boolean };
+    }) => adminApi.updateTopic(id, data),
+    onSuccess: () => invalidate("topics", "chapters", ...PACING_DEPENDENTS),
+  });
+}
+
+export function useDeleteTopic() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (id: number) => adminApi.deleteTopic(id),
+    onSuccess: () =>
+      invalidate("topics", "subtopics", "chapters", ...PACING_DEPENDENTS),
   });
 }
 
 /* ── Subtopics ───────────────────────────────────────────────────────────── */
 
-export function useSubtopics(chapterId?: number) {
+export function useSubtopics(topicId?: number) {
   return useQuery({
-    queryKey: keys.subtopics(chapterId),
-    queryFn: () => adminApi.listSubtopics(chapterId as number, "all"),
-    enabled: typeof chapterId === "number",
+    queryKey: keys.subtopics(topicId),
+    queryFn: () => adminApi.listSubtopics(topicId as number, "all"),
+    enabled: typeof topicId === "number",
   });
 }
 
@@ -306,11 +353,11 @@ export function useCreateSubtopic() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: (data: {
-      chapterId: number;
+      topicId: number;
       name: string;
       displayOrder?: number;
     }) => adminApi.createSubtopic(data),
-    onSuccess: () => invalidate("subtopics", "chapters", ...PACING_DEPENDENTS),
+    onSuccess: () => invalidate("subtopics", "topics", ...PACING_DEPENDENTS),
   });
 }
 
@@ -324,7 +371,7 @@ export function useUpdateSubtopic() {
       id: number;
       data: { name?: string; displayOrder?: number; isActive?: boolean };
     }) => adminApi.updateSubtopic(id, data),
-    onSuccess: () => invalidate("subtopics", "chapters", ...PACING_DEPENDENTS),
+    onSuccess: () => invalidate("subtopics", "topics", ...PACING_DEPENDENTS),
   });
 }
 
@@ -332,7 +379,7 @@ export function useDeleteSubtopic() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: (id: number) => adminApi.deleteSubtopic(id),
-    onSuccess: () => invalidate("subtopics", "chapters", ...PACING_DEPENDENTS),
+    onSuccess: () => invalidate("subtopics", "topics", ...PACING_DEPENDENTS),
   });
 }
 

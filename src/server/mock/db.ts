@@ -68,12 +68,24 @@ export interface MockChapter {
   isActive: boolean;
 }
 
-export interface MockSubtopic {
+export interface MockTopic {
   id: number;
   chapterId: number;
   name: string;
   displayOrder: number;
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MockSubtopic {
+  id: number;
+  topicId: number;
+  name: string;
+  displayOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface MockCalendarEvent {
@@ -155,6 +167,7 @@ export interface MockDb {
   teachers: MockTeacher[];
   assignments: MockAssignment[];
   chapters: MockChapter[];
+  topics: MockTopic[];
   subtopics: MockSubtopic[];
   calendarEvents: MockCalendarEvent[];
   sessionLogs: MockSessionLog[];
@@ -277,6 +290,8 @@ const CHAPTER_SEED: Record<string, string[]> = {
   GK: ["Current Affairs", "World Geography"],
 };
 
+const TOPIC_SUFFIX = ["Fundamentals", "Applications", "Practice and revision"];
+
 const SUBTOPIC_SUFFIX = [
   "Introduction",
   "Core concepts",
@@ -389,17 +404,38 @@ function seed(): MockDb {
     }
   }
 
+  /* Topics sit between a chapter and its subtopics. */
+  const topics: MockTopic[] = [];
   const subtopics: MockSubtopic[] = [];
   for (const chapter of chapters) {
-    const count = between(3, 6);
-    for (let i = 0; i < count; i += 1) {
-      subtopics.push({
-        id: nextId("subtopics"),
+    const topicCount = between(2, 3);
+    // Subtopic names stay unique inside a chapter by walking the suffix list.
+    let suffixCursor = 0;
+    for (let t = 0; t < topicCount; t += 1) {
+      const topic: MockTopic = {
+        id: nextId("topics"),
         chapterId: chapter.id,
-        name: `${chapter.name} — ${SUBTOPIC_SUFFIX[i]}`,
-        displayOrder: i + 1,
+        name: `${chapter.name} — ${TOPIC_SUFFIX[t]}`,
+        displayOrder: t + 1,
         isActive: true,
-      });
+        createdAt: isoDateTime(-180, 7, 0),
+        updatedAt: isoDateTime(-180, 7, 0),
+      };
+      topics.push(topic);
+
+      const count = between(1, 2);
+      for (let i = 0; i < count; i += 1) {
+        subtopics.push({
+          id: nextId("subtopics"),
+          topicId: topic.id,
+          name: `${chapter.name} — ${SUBTOPIC_SUFFIX[suffixCursor % SUBTOPIC_SUFFIX.length]}`,
+          displayOrder: i + 1,
+          isActive: true,
+          createdAt: isoDateTime(-180, 7, 30),
+          updatedAt: isoDateTime(-180, 7, 30),
+        });
+        suffixCursor += 1;
+      }
     }
   }
 
@@ -510,11 +546,26 @@ function seed(): MockDb {
     list.push(chapter);
     chapterByKey.set(key, list);
   }
-  const subtopicsByChapter = new Map<number, MockSubtopic[]>();
+  /* Chapter → subtopics, in teaching order: topic by topic, and within a topic
+     by the subtopic's own display order. */
+  const topicChapter = new Map(topics.map((t) => [t.id, t.chapterId]));
+  const subtopicsByTopic = new Map<number, MockSubtopic[]>();
   for (const subtopic of subtopics) {
-    const list = subtopicsByChapter.get(subtopic.chapterId) ?? [];
+    const list = subtopicsByTopic.get(subtopic.topicId) ?? [];
     list.push(subtopic);
-    subtopicsByChapter.set(subtopic.chapterId, list);
+    subtopicsByTopic.set(subtopic.topicId, list);
+  }
+  const subtopicsByChapter = new Map<number, MockSubtopic[]>();
+  for (const topic of [...topics].sort(
+    (a, b) => a.displayOrder - b.displayOrder || a.id - b.id,
+  )) {
+    const list = subtopicsByChapter.get(topic.chapterId) ?? [];
+    list.push(
+      ...(subtopicsByTopic.get(topic.id) ?? [])
+        .slice()
+        .sort((a, b) => a.displayOrder - b.displayOrder || a.id - b.id),
+    );
+    subtopicsByChapter.set(topic.chapterId, list);
   }
 
   const silentTeacherIds = new Set([
@@ -540,11 +591,7 @@ function seed(): MockDb {
     const flat = pool
       .slice()
       .sort((a, b) => a.displayOrder - b.displayOrder)
-      .flatMap((chapter) =>
-        (subtopicsByChapter.get(chapter.id) ?? [])
-          .slice()
-          .sort((a, b) => a.displayOrder - b.displayOrder),
-      );
+      .flatMap((chapter) => subtopicsByChapter.get(chapter.id) ?? []);
     flatSyllabus.set(assignment.id, flat);
     // Head start: some of the syllabus was covered before this log window.
     syllabusCursor.set(
@@ -652,7 +699,7 @@ function seed(): MockDb {
           id: nextId("sessionTopics"),
           sessionLogId: log.id,
           subtopicId: null,
-          chapterId: anchor.chapterId,
+          chapterId: topicChapter.get(anchor.topicId) ?? null,
           status: "COMPLETE",
           notes: type === "TEST" ? "Chapter test conducted" : null,
         });
@@ -701,6 +748,7 @@ function seed(): MockDb {
     teachers,
     assignments,
     chapters,
+    topics,
     subtopics,
     calendarEvents,
     sessionLogs,
@@ -741,12 +789,19 @@ export function computePacing(db: MockDb): MockPacing[] {
     }
   }
 
+  /* Subtopics hang off a topic now, so a chapter's subtopics are the subtopics
+     of its active topics. */
+  const chapterOfTopic = new Map(
+    db.topics.filter((t) => t.isActive).map((t) => [t.id, t.chapterId]),
+  );
   const subtopicsByChapter = new Map<number, MockSubtopic[]>();
   for (const subtopic of db.subtopics) {
     if (!subtopic.isActive) continue;
-    const list = subtopicsByChapter.get(subtopic.chapterId) ?? [];
+    const chapterId = chapterOfTopic.get(subtopic.topicId);
+    if (chapterId === undefined) continue;
+    const list = subtopicsByChapter.get(chapterId) ?? [];
     list.push(subtopic);
-    subtopicsByChapter.set(subtopic.chapterId, list);
+    subtopicsByChapter.set(chapterId, list);
   }
 
   const rows: MockPacing[] = [];

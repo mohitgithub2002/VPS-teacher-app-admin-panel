@@ -16,6 +16,7 @@ import {
   type MockDb,
   type MockSessionLog,
   type MockTeacher,
+  type MockTopic,
 } from "./db";
 import type {
   AttendanceStatus,
@@ -102,9 +103,18 @@ function shapeChapter(db: MockDb, chapter: MockChapter) {
     subject: subject ? { id: subject.id, name: subject.name } : null,
     class: cls ? { id: cls.id, name: cls.name } : null,
     _count: {
-      subtopics: db.subtopics.filter(
-        (s) => s.chapterId === chapter.id && s.isActive,
-      ).length,
+      topics: db.topics.filter((t) => t.chapterId === chapter.id && t.isActive)
+        .length,
+    },
+  };
+}
+
+function shapeTopic(db: MockDb, topic: MockTopic) {
+  return {
+    ...topic,
+    _count: {
+      subtopics: db.subtopics.filter((s) => s.topicId === topic.id && s.isActive)
+        .length,
     },
   };
 }
@@ -703,18 +713,18 @@ export function handleMockRequest(
     return notFound("unknown chapter route");
   }
 
-  /* ── subtopics ────────────────────────────────────────────────────────── */
+  /* ── topics ───────────────────────────────────────────────────────────── */
 
-  if (resource === "subtopics") {
+  if (resource === "topics") {
     if (!second && method === "GET") {
       const chapterId = num(search.get("chapterId"));
       if (chapterId === undefined) return bad("chapterId is required");
       const active = search.get("active") ?? "true";
-      const rows = db.subtopics
-        .filter((s) => s.chapterId === chapterId)
-        .filter((s) => (active === "all" ? true : s.isActive === (active === "true")))
+      const rows = db.topics
+        .filter((t) => t.chapterId === chapterId)
+        .filter((t) => (active === "all" ? true : t.isActive === (active === "true")))
         .sort((a, b) => a.displayOrder - b.displayOrder || a.id - b.id);
-      return ok(rows);
+      return ok(rows.map((t) => shapeTopic(db, t)));
     }
 
     if (!second && method === "POST") {
@@ -723,12 +733,85 @@ export function handleMockRequest(
       if (!Number.isFinite(chapterId)) return bad("chapterId is required");
       if (!name) return bad("name is required");
       if (!db.chapters.some((c) => c.id === chapterId)) return notFound("chapter not found");
-      const subtopic = {
-        id: nextSequence(db, "subtopics"),
+      const now = new Date().toISOString();
+      const topic: MockTopic = {
+        id: nextSequence(db, "topics"),
         chapterId,
         name,
         displayOrder: Number(body?.displayOrder ?? 0) || 0,
         isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.topics.push(topic);
+      audit(db, "TOPIC_CREATED", "Topic", topic.id, null, { name });
+      recalcPacing(db);
+      return created(topic);
+    }
+
+    const id = num(second ?? null);
+    const topic = db.topics.find((t) => t.id === id);
+    if (!topic) return notFound("topic not found");
+
+    if (method === "PATCH") {
+      const before = { ...topic };
+      if (body?.name !== undefined) {
+        const name = String(body.name).trim();
+        if (!name) return bad("name cannot be empty");
+        topic.name = name;
+      }
+      if (body?.displayOrder !== undefined) {
+        topic.displayOrder = Number(body.displayOrder) || 0;
+      }
+      if (body?.isActive !== undefined) topic.isActive = Boolean(body.isActive);
+      topic.updatedAt = new Date().toISOString();
+      audit(db, "TOPIC_UPDATED", "Topic", topic.id, before, { ...topic });
+      recalcPacing(db);
+      return ok(topic);
+    }
+
+    if (method === "DELETE") {
+      topic.isActive = false;
+      topic.updatedAt = new Date().toISOString();
+      audit(db, "TOPIC_DELETED", "Topic", topic.id, { isActive: true }, {
+        isActive: false,
+      });
+      recalcPacing(db);
+      return ok(topic);
+    }
+
+    return notFound("unknown topic route");
+  }
+
+  /* ── subtopics ────────────────────────────────────────────────────────── */
+
+  if (resource === "subtopics") {
+    if (!second && method === "GET") {
+      const topicId = num(search.get("topicId"));
+      if (topicId === undefined) return bad("topicId is required");
+      const active = search.get("active") ?? "true";
+      const rows = db.subtopics
+        .filter((s) => s.topicId === topicId)
+        .filter((s) => (active === "all" ? true : s.isActive === (active === "true")))
+        .sort((a, b) => a.displayOrder - b.displayOrder || a.id - b.id);
+      return ok(rows);
+    }
+
+    if (!second && method === "POST") {
+      const topicId = Number(body?.topicId);
+      const name = String(body?.name ?? "").trim();
+      if (!Number.isFinite(topicId)) return bad("topicId is required");
+      if (!name) return bad("name is required");
+      if (!db.topics.some((t) => t.id === topicId)) return notFound("topic not found");
+      const now = new Date().toISOString();
+      const subtopic = {
+        id: nextSequence(db, "subtopics"),
+        topicId,
+        name,
+        displayOrder: Number(body?.displayOrder ?? 0) || 0,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
       };
       db.subtopics.push(subtopic);
       audit(db, "SUBTOPIC_CREATED", "Subtopic", subtopic.id, null, { name });
@@ -751,6 +834,7 @@ export function handleMockRequest(
         subtopic.displayOrder = Number(body.displayOrder) || 0;
       }
       if (body?.isActive !== undefined) subtopic.isActive = Boolean(body.isActive);
+      subtopic.updatedAt = new Date().toISOString();
       audit(db, "SUBTOPIC_UPDATED", "Subtopic", subtopic.id, before, { ...subtopic });
       recalcPacing(db);
       return ok(subtopic);
@@ -758,6 +842,7 @@ export function handleMockRequest(
 
     if (method === "DELETE") {
       subtopic.isActive = false;
+      subtopic.updatedAt = new Date().toISOString();
       audit(db, "SUBTOPIC_DELETED", "Subtopic", subtopic.id, { isActive: true }, {
         isActive: false,
       });
@@ -995,7 +1080,10 @@ export function handleMockRequest(
 
     if (second === "test-coverage") {
       const subjectId = num(search.get("subjectId"));
-      const subtopicChapter = new Map(db.subtopics.map((s) => [s.id, s.chapterId]));
+      const topicChapter = new Map(db.topics.map((t) => [t.id, t.chapterId]));
+      const subtopicChapter = new Map(
+        db.subtopics.map((s) => [s.id, topicChapter.get(s.topicId)]),
+      );
       const counts = new Map<number, { testCount: number; revisionCount: number }>();
 
       for (const log of db.sessionLogs) {
@@ -1052,7 +1140,9 @@ export function handleMockRequest(
       const rows = db.subtopics
         .filter((s) => s.isActive && !completed.has(s.id))
         .map((subtopic) => {
-          const chapter = db.chapters.find((c) => c.id === subtopic.chapterId);
+          const topic = db.topics.find((t) => t.id === subtopic.topicId);
+          if (!topic || !topic.isActive) return null;
+          const chapter = db.chapters.find((c) => c.id === topic.chapterId);
           if (!chapter || !chapter.isActive) return null;
           if (classId !== undefined && chapter.classId !== classId) return null;
           if (subjectId !== undefined && chapter.subjectId !== subjectId) return null;
@@ -1062,11 +1152,15 @@ export function handleMockRequest(
             id: subtopic.id,
             name: subtopic.name,
             displayOrder: subtopic.displayOrder,
-            chapter: {
-              id: chapter.id,
-              name: chapter.name,
-              subject: subject ? { id: subject.id, name: subject.name } : null,
-              class: cls ? { id: cls.id, name: cls.name } : null,
+            topic: {
+              id: topic.id,
+              name: topic.name,
+              chapter: {
+                id: chapter.id,
+                name: chapter.name,
+                subject: subject ? { id: subject.id, name: subject.name } : null,
+                class: cls ? { id: cls.id, name: cls.name } : null,
+              },
             },
           };
         })

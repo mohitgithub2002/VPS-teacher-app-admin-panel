@@ -26,11 +26,14 @@ export default function UnmarkedPage() {
 
   const rows = unmarked.data ?? [];
 
-  /* Group by chapter so the list reads as gaps in the syllabus, not a flat dump. */
+  /* Group by topic so the list reads as gaps in the syllabus, not a flat dump.
+     The chapter above the topic stays on the row as context. */
   const groups = useMemo(() => {
     const map = new Map<
       number,
       {
+        topicName: string;
+        chapterId: number;
         chapterName: string;
         subjectName: string;
         className: string;
@@ -39,11 +42,13 @@ export default function UnmarkedPage() {
     >();
 
     for (const row of unmarked.data ?? []) {
-      const key = row.chapter.id;
+      const key = row.topic.id;
       const entry = map.get(key) ?? {
-        chapterName: row.chapter.name,
-        subjectName: row.chapter.subject?.name ?? "—",
-        className: row.chapter.class?.name ?? "—",
+        topicName: row.topic.name,
+        chapterId: row.topic.chapter?.id ?? 0,
+        chapterName: row.topic.chapter?.name ?? "—",
+        subjectName: row.topic.chapter?.subject?.name ?? "—",
+        className: row.topic.chapter?.class?.name ?? "—",
         subtopics: [],
       };
       entry.subtopics.push({
@@ -63,9 +68,15 @@ export default function UnmarkedPage() {
       .sort(
         (a, b) =>
           b.subtopics.length - a.subtopics.length ||
-          a.chapterName.localeCompare(b.chapterName),
+          a.chapterName.localeCompare(b.chapterName) ||
+          a.topicName.localeCompare(b.topicName),
       );
   }, [unmarked.data]);
+
+  const chaptersAffected = useMemo(
+    () => new Set(groups.map((group) => group.chapterId)).size,
+    [groups],
+  );
 
   return (
     <main className="wk-page wk-page--wide">
@@ -92,8 +103,14 @@ export default function UnmarkedPage() {
           tone="brand"
         />
         <StatCard
-          label="Chapters affected"
+          label="Topics affected"
           value={unmarked.isLoading ? "—" : groups.length}
+          meta="Across the current filters"
+          icon="layers"
+        />
+        <StatCard
+          label="Chapters affected"
+          value={unmarked.isLoading ? "—" : chaptersAffected}
           meta="Across the current filters"
           icon="book"
         />
@@ -111,7 +128,7 @@ export default function UnmarkedPage() {
 
       <Card>
         <CardHead
-          title="Grouped by chapter"
+          title="Grouped by topic"
           subtitle="Largest gaps first"
         />
         <CardBody padding="flush">
@@ -138,10 +155,10 @@ export default function UnmarkedPage() {
                   <div className="wk-spread" style={{ marginBottom: "var(--wk-space-3)" }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 600 }} className="wk-truncate">
-                        {group.chapterName}
+                        {group.topicName}
                       </div>
                       <div className="wk-body-sm wk-text-secondary">
-                        {group.subjectName} · {group.className}
+                        {group.chapterName} · {group.subjectName} · {group.className}
                       </div>
                     </div>
                     <span className="wk-body-sm wk-num wk-text-secondary" style={{ flex: "none" }}>

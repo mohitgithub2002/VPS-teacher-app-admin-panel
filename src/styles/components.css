@@ -1142,15 +1142,16 @@
   flex: none;
 }
 
-/* Three-column syllabus builder: subject → chapter → subtopic. */
+/* Four-column syllabus builder: subject → chapter → topic → subtopic. */
 .wk-syllabus {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.2fr) minmax(0, 1.1fr);
+  grid-template-columns:
+    minmax(0, 0.85fr) minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--wk-space-5);
   align-items: start;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1440px) {
   .wk-syllabus {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
