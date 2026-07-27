@@ -11,9 +11,9 @@ export default function LoginPage() {
       <section className="wk-auth__brand">
         <div className="wk-row">
           <span className="wk-logo" aria-hidden="true">
-            W
+            V
           </span>
-          <span style={{ fontWeight: 600, letterSpacing: "-0.01em" }}>Wokka Schools</span>
+          <span style={{ fontWeight: 600, letterSpacing: "-0.01em" }}>VPS School</span>
         </div>
 
         <div>

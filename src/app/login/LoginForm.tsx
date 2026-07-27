@@ -13,7 +13,7 @@ export function LoginForm() {
   const params = useSearchParams();
   const login = useLogin();
 
-  const [username, setUsername] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -23,13 +23,13 @@ export function LoginForm() {
     event.preventDefault();
     setError(null);
 
-    if (!username.trim() || !password) {
-      setError("Enter your username and password.");
+    if (!phone.trim() || !password) {
+      setError("Enter your phone number and password.");
       return;
     }
 
     login.mutate(
-      { username: username.trim(), password },
+      { phone: phone.trim(), password },
       {
         onSuccess: () => {
           // Full navigation so middleware sees the fresh session cookie.
@@ -59,12 +59,13 @@ export function LoginForm() {
 
       <div className="wk-stack">
         <Input
-          label="Username"
-          name="username"
-          autoComplete="username"
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          placeholder="admin"
+          label="Phone number"
+          name="phone"
+          type="tel"
+          autoComplete="tel"
+          value={phone}
+          onChange={(event) => setPhone(event.target.value)}
+          placeholder="9876543210"
           required
         />
         <Input
@@ -90,7 +91,7 @@ export function LoginForm() {
 
       {!process.env.NEXT_PUBLIC_HIDE_DEMO_HINT ? (
         <p className="wk-caption">
-          Demo data mode: any username and password will sign you in.
+          Demo data mode: any phone number and password will sign you in.
         </p>
       ) : null}
     </form>

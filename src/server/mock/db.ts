@@ -147,7 +147,7 @@ export interface MockAuditLog {
 
 export interface MockDb {
   sequences: Record<string, number>;
-  admin: { id: number; name: string; username: string; role: "SUPERUSER" };
+  admin: { id: number; name: string; phone: string; role: "SUPERUSER" };
   academicSessions: AcademicSession[];
   classes: MockClass[];
   classrooms: MockClassroom[];
@@ -693,7 +693,7 @@ function seed(): MockDb {
 
   const db: MockDb = {
     sequences,
-    admin: { id: 1, name: "Aparna Desai", username: "admin", role: "SUPERUSER" },
+    admin: { id: 1, name: "Aparna Desai", phone: "9876543210", role: "SUPERUSER" },
     academicSessions,
     classes,
     classrooms,

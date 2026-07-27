@@ -45,10 +45,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside className="wk-side" data-open={navOpen} aria-label="Admin sections">
         <div className="wk-side__brand">
           <span className="wk-logo" aria-hidden="true">
-            W
+            V
           </span>
           <div className="wk-grow">
-            <div className="wk-side__name">Wokka Schools</div>
+            <div className="wk-side__name">VPS School</div>
             <div className="wk-side__role">Teacher management</div>
           </div>
           <button

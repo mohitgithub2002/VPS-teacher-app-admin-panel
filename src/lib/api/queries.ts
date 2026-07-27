@@ -86,7 +86,7 @@ export function useMe() {
 
 export function useLogin() {
   return useMutation({
-    mutationFn: (creds: { username: string; password: string }) =>
+    mutationFn: (creds: { phone: string; password: string }) =>
       adminApi.login(creds),
   });
 }

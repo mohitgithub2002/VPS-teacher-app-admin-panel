@@ -270,10 +270,10 @@ export function handleMockRequest(
 
   if (resource === "auth") {
     if (second === "login" && method === "POST") {
-      const username = String(body?.username ?? "").trim();
+      const phone = String(body?.phone ?? "").trim();
       const password = String(body?.password ?? "");
-      if (!username || !password) {
-        return bad("username and password are required");
+      if (!phone || !password) {
+        return bad("phone and password are required");
       }
       // Demo backend: any non-empty credentials are accepted.
       return { ...ok({ admin: db.admin }), setSession: true };

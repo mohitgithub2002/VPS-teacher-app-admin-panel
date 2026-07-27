@@ -126,7 +126,7 @@ class AdminApiClient {
    * deployment names them differently.
    */
 
-  login(credentials: { username: string; password: string }) {
+  login(credentials: { phone: string; password: string }) {
     return this.request<{ admin: AdminUser }>("/auth/login", {
       method: "POST",
       body: JSON.stringify(credentials),

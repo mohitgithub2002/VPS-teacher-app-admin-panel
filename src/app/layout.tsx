@@ -14,8 +14,8 @@ const lexend = Lexend({
 
 export const metadata: Metadata = {
   title: {
-    default: "Wokka Schools · Admin",
-    template: "%s · Wokka Schools Admin",
+    default: "VPS School · Admin",
+    template: "%s · VPS School Admin",
   },
   description:
     "Admin panel for teacher management: accounts, assignments, syllabus, timetable, pacing and the audit trail.",

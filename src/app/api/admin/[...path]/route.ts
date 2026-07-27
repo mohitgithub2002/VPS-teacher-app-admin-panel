@@ -14,6 +14,30 @@ import { NextResponse, type NextRequest } from "next/server";
 import { handleMockRequest } from "@/server/mock/handler";
 
 const UPSTREAM = process.env.ADMIN_API_BASE_URL?.replace(/\/$/, "");
+
+// `{host}/api`, derived by stripping the `/v1/admin` suffix off the admin
+// base. Used to build the auth and v2 bases below.
+const API_ROOT = UPSTREAM?.replace(/\/v1\/admin$/, "");
+
+// Auth lives outside the versioned admin resource surface — e.g. the admin
+// API is mounted at `{host}/api/v1/admin` but login/logout/me are at
+// `{host}/api/auth`. Override with ADMIN_AUTH_BASE_URL if the deployment
+// differs.
+const AUTH_UPSTREAM =
+  process.env.ADMIN_AUTH_BASE_URL?.replace(/\/$/, "") ?? API_ROOT;
+
+// classes/classrooms/academic-sessions live at `{host}/api/v2`, not under
+// the v1 admin base. Override with ADMIN_V2_BASE_URL if the deployment
+// differs. academic-sessions is also renamed to `sessions` on v2.
+const V2_UPSTREAM =
+  process.env.ADMIN_V2_BASE_URL?.replace(/\/$/, "") ??
+  (API_ROOT ? `${API_ROOT}/v2` : undefined);
+
+const V2_RESOURCES = new Set(["classes", "classrooms", "academic-sessions"]);
+const V2_RESOURCE_RENAME: Record<string, string> = {
+  "academic-sessions": "sessions",
+};
+
 const SESSION_COOKIE = process.env.ADMIN_SESSION_COOKIE ?? "session";
 const SESSION_MAX_AGE = 60 * 60 * 12;
 
@@ -82,8 +106,21 @@ async function proxy(
   method: string,
 ) {
   const query = request.nextUrl.search;
-  const target = `${UPSTREAM}/${path.map(encodeURIComponent).join("/")}${query}`;
+
+  const resource = path[0];
+  const base =
+    resource === "auth"
+      ? AUTH_UPSTREAM
+      : V2_RESOURCES.has(resource)
+        ? V2_UPSTREAM
+        : UPSTREAM;
+  const mappedPath = V2_RESOURCE_RENAME[resource]
+    ? [V2_RESOURCE_RENAME[resource], ...path.slice(1)]
+    : path;
+  const target = `${base}/${mappedPath.map(encodeURIComponent).join("/")}${query}`;
   const cookie = request.headers.get("cookie");
+
+  console.log(`[admin-api-proxy] ${method} ${target}`);
 
   let upstream: Response;
   try {
