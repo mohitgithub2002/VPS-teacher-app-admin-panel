@@ -37,6 +37,7 @@ import type {
   Subject,
   Subtopic,
   Teacher,
+  Topic,
   TeacherActivity,
   TeacherDetail,
   TeacherListParams,
@@ -284,14 +285,44 @@ class AdminApiClient {
     return this.request<Chapter>(`/chapters/${id}`, { method: "DELETE" });
   }
 
+  /* ── Topics ───────────────────────────────────────────────────────────────
+   * A topic sits between a chapter and its subtopics: chapter → topic →
+   * subtopic. The resource mirrors subtopics exactly, soft delete included.
+   */
+
+  listTopics(chapterId: number, active?: "true" | "false" | "all") {
+    return this.request<Topic[]>(`/topics${toQuery({ chapterId, active })}`);
+  }
+
+  createTopic(data: { chapterId: number; name: string; displayOrder?: number }) {
+    return this.request<Topic>("/topics", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  updateTopic(
+    id: number,
+    data: { name?: string; displayOrder?: number; isActive?: boolean },
+  ) {
+    return this.request<Topic>(`/topics/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  deleteTopic(id: number) {
+    return this.request<Topic>(`/topics/${id}`, { method: "DELETE" });
+  }
+
   /* ── Subtopics ────────────────────────────────────────────────────────── */
 
-  listSubtopics(chapterId: number, active?: "true" | "false" | "all") {
-    return this.request<Subtopic[]>(`/subtopics${toQuery({ chapterId, active })}`);
+  listSubtopics(topicId: number, active?: "true" | "false" | "all") {
+    return this.request<Subtopic[]>(`/subtopics${toQuery({ topicId, active })}`);
   }
 
   createSubtopic(data: {
-    chapterId: number;
+    topicId: number;
     name: string;
     displayOrder?: number;
   }) {

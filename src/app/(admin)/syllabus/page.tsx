@@ -22,27 +22,33 @@ import {
   useCreateChapter,
   useCreateSubject,
   useCreateSubtopic,
+  useCreateTopic,
   useDeleteChapter,
   useDeleteSubject,
   useDeleteSubtopic,
+  useDeleteTopic,
   useSubjects,
   useSubtopics,
+  useTopics,
   useUpdateChapter,
   useUpdateSubject,
   useUpdateSubtopic,
+  useUpdateTopic,
 } from "@/lib/api/queries";
 import { pluralise } from "@/lib/format";
-import type { Chapter, Subject, Subtopic } from "@/lib/api/types";
+import type { Chapter, Subject, Subtopic, Topic } from "@/lib/api/types";
 
 type Editing =
   | { level: "subject"; record: Subject | null }
   | { level: "chapter"; record: Chapter | null }
+  | { level: "topic"; record: Topic | null }
   | { level: "subtopic"; record: Subtopic | null }
   | null;
 
 type Deleting =
   | { level: "subject"; id: number; name: string }
   | { level: "chapter"; id: number; name: string }
+  | { level: "topic"; id: number; name: string }
   | { level: "subtopic"; id: number; name: string }
   | null;
 
@@ -52,6 +58,7 @@ export default function SyllabusPage() {
   const [classId, setClassId] = useState<number | "">("");
   const [subjectId, setSubjectId] = useState<number | null>(null);
   const [chapterId, setChapterId] = useState<number | null>(null);
+  const [topicId, setTopicId] = useState<number | null>(null);
   const [editing, setEditing] = useState<Editing>(null);
   const [deleting, setDeleting] = useState<Deleting>(null);
 
@@ -64,7 +71,8 @@ export default function SyllabusPage() {
     },
     { enabled: subjectId !== null && classId !== "" },
   );
-  const subtopics = useSubtopics(chapterId ?? undefined);
+  const topics = useTopics(chapterId ?? undefined);
+  const subtopics = useSubtopics(topicId ?? undefined);
 
   const createSubject = useCreateSubject();
   const updateSubject = useUpdateSubject();
@@ -72,16 +80,23 @@ export default function SyllabusPage() {
   const createChapter = useCreateChapter();
   const updateChapter = useUpdateChapter();
   const deleteChapter = useDeleteChapter();
+  const createTopic = useCreateTopic();
+  const updateTopic = useUpdateTopic();
+  const deleteTopic = useDeleteTopic();
   const createSubtopic = useCreateSubtopic();
   const updateSubtopic = useUpdateSubtopic();
   const deleteSubtopic = useDeleteSubtopic();
 
-  // Selecting a different subject or class invalidates the chapter selection.
+  // Selecting a different subject or class invalidates the chapter selection,
+  // and a different chapter invalidates the topic below it.
   useEffect(() => setChapterId(null), [subjectId, classId]);
+  useEffect(() => setTopicId(null), [chapterId]);
 
   const selectedSubject = subjects.data?.find((s) => s.id === subjectId) ?? null;
   const selectedChapter = chapters.data?.find((c) => c.id === chapterId) ?? null;
+  const selectedTopic = topics.data?.find((t) => t.id === topicId) ?? null;
   const chapterRows = chapters.data ?? [];
+  const topicRows = topics.data ?? [];
   const subtopicRows = subtopics.data ?? [];
 
   const nextOrder = (rows: { displayOrder: number }[]) =>
@@ -111,6 +126,14 @@ export default function SyllabusPage() {
         },
         onError: fail,
       });
+    } else if (deleting.level === "topic") {
+      deleteTopic.mutate(deleting.id, {
+        onSuccess: () => {
+          done("Topic deactivated");
+          if (topicId === deleting.id) setTopicId(null);
+        },
+        onError: fail,
+      });
     } else {
       deleteSubtopic.mutate(deleting.id, {
         onSuccess: () => done("Subtopic deactivated"),
@@ -120,13 +143,16 @@ export default function SyllabusPage() {
   };
 
   const deletePending =
-    deleteSubject.isPending || deleteChapter.isPending || deleteSubtopic.isPending;
+    deleteSubject.isPending ||
+    deleteChapter.isPending ||
+    deleteTopic.isPending ||
+    deleteSubtopic.isPending;
 
   return (
     <main className="wk-page wk-page--wide">
       <PageHeader
         title="Syllabus builder"
-        lede="Subjects hold chapters, chapters hold subtopics. Chapters are scoped to a subject and a class, so pick both."
+        lede="Subjects hold chapters, chapters hold topics, topics hold subtopics. Chapters are scoped to a subject and a class, so pick both."
         actions={
           <Button
             variant="primary"
@@ -147,7 +173,7 @@ export default function SyllabusPage() {
         />
         {classId === "" ? (
           <p className="wk-body-sm wk-text-secondary" style={{ alignSelf: "center" }}>
-            Chapters and subtopics appear once a class is selected.
+            Chapters, topics and subtopics appear once a class is selected.
           </p>
         ) : null}
       </div>
@@ -317,7 +343,7 @@ export default function SyllabusPage() {
                       {chapter.periodsRequired ? (
                         <span>{chapter.periodsRequired}p</span>
                       ) : null}
-                      <span>{chapter._count?.subtopics ?? 0} st</span>
+                      <span>{chapter._count?.topics ?? 0} tp</span>
                       {!chapter.isActive ? <Badge tone="neutral">Inactive</Badge> : null}
                     </span>
                   </button>
@@ -375,17 +401,141 @@ export default function SyllabusPage() {
           ) : null}
         </Card>
 
+        {/* ── Topics ───────────────────────────────────────────────────── */}
+        <Card>
+          <CardHead
+            title="Topics"
+            subtitle={
+              selectedChapter
+                ? `${selectedChapter.name} · ${topicRows.length} topics`
+                : "Pick a chapter"
+            }
+            actions={
+              selectedChapter ? (
+                <Button
+                  size="sm"
+                  icon="plus"
+                  onClick={() => setEditing({ level: "topic", record: null })}
+                >
+                  Add
+                </Button>
+              ) : null
+            }
+          />
+          <CardBody padding="flush">
+            {!selectedChapter ? (
+              <EmptyState
+                icon="layers"
+                title="Choose a chapter"
+                body="Topics group the subtopics inside a chapter — pick a chapter to see or add them."
+              />
+            ) : topics.isLoading ? (
+              <div className="wk-stack-sm" style={{ padding: "var(--wk-space-4)" }}>
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <Skeleton key={index} height={28} />
+                ))}
+              </div>
+            ) : topics.isError ? (
+              <ErrorState error={topics.error} onRetry={() => topics.refetch()} />
+            ) : topicRows.length === 0 ? (
+              <EmptyState
+                icon="layers"
+                title="No topics here yet"
+                body="Subtopics live under a topic, so add the first topic before adding subtopics."
+                action={
+                  <Button
+                    size="sm"
+                    icon="plus"
+                    onClick={() => setEditing({ level: "topic", record: null })}
+                  >
+                    Add topic
+                  </Button>
+                }
+              />
+            ) : (
+              <div className="wk-picklist" role="listbox" aria-label="Topics">
+                {topicRows.map((topic) => (
+                  <button
+                    key={topic.id}
+                    type="button"
+                    role="option"
+                    className="wk-pick"
+                    aria-selected={topic.id === topicId}
+                    onClick={() => setTopicId(topic.id)}
+                    title={topic.name}
+                  >
+                    <span className="wk-pick__order">{topic.displayOrder}</span>
+                    <span className="wk-truncate">{topic.name}</span>
+                    <span className="wk-pick__meta">
+                      <span>{topic._count?.subtopics ?? 0} st</span>
+                      {!topic.isActive ? <Badge tone="neutral">Inactive</Badge> : null}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </CardBody>
+          {selectedTopic ? (
+            <div className="wk-card__foot" style={{ justifyContent: "space-between" }}>
+              <span className="wk-caption wk-truncate wk-grow">{selectedTopic.name}</span>
+              <div className="wk-row">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon="edit"
+                  onClick={() => setEditing({ level: "topic", record: selectedTopic })}
+                >
+                  Edit
+                </Button>
+                {selectedTopic.isActive ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon="trash"
+                    onClick={() =>
+                      setDeleting({
+                        level: "topic",
+                        id: selectedTopic.id,
+                        name: selectedTopic.name,
+                      })
+                    }
+                  >
+                    Deactivate
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon="refresh"
+                    onClick={() =>
+                      updateTopic.mutate(
+                        { id: selectedTopic.id, data: { isActive: true } },
+                        {
+                          onSuccess: () => toast.success("Topic reactivated"),
+                          onError: (error) => toast.fromError(error),
+                        },
+                      )
+                    }
+                  >
+                    Reactivate
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </Card>
+
         {/* ── Subtopics ────────────────────────────────────────────────── */}
         <Card>
           <CardHead
             title="Subtopics"
             subtitle={
-              selectedChapter
-                ? `${selectedChapter.name} · ${subtopicRows.length} subtopics`
-                : "Pick a chapter"
+              selectedTopic
+                ? `${selectedTopic.name} · ${subtopicRows.length} subtopics`
+                : "Pick a topic"
             }
             actions={
-              selectedChapter ? (
+              selectedTopic ? (
                 <Button
                   size="sm"
                   icon="plus"
@@ -397,10 +547,10 @@ export default function SyllabusPage() {
             }
           />
           <CardBody padding="flush">
-            {!selectedChapter ? (
+            {!selectedTopic ? (
               <EmptyState
                 icon="list"
-                title="Choose a chapter"
+                title="Choose a topic"
                 body="Subtopics are what teachers tick off in a session, so they drive completion percentages."
               />
             ) : subtopics.isLoading ? (
@@ -415,7 +565,7 @@ export default function SyllabusPage() {
               <EmptyState
                 icon="list"
                 title="No subtopics"
-                body="A chapter with no subtopics can only be marked complete in bulk."
+                body="A topic with no subtopics can only be marked complete in bulk."
                 action={
                   <Button
                     size="sm"
@@ -606,6 +756,60 @@ export default function SyllabusPage() {
         }}
       />
 
+      {/* ── Topic form ───────────────────────────────────────────────────── */}
+      <EntityModal
+        open={editing?.level === "topic"}
+        onClose={() => setEditing(null)}
+        title={editing?.level === "topic" && editing.record ? "Edit topic" : "Add topic"}
+        description={
+          selectedChapter
+            ? `Inside ${selectedChapter.name}. Topics group the subtopics of a chapter.`
+            : undefined
+        }
+        fields={[
+          { key: "name", label: "Topic name", required: true, placeholder: "Kinematics" },
+          { key: "displayOrder", label: "Display order", type: "number" },
+        ]}
+        initial={
+          editing?.level === "topic" && editing.record
+            ? {
+                name: editing.record.name,
+                displayOrder: String(editing.record.displayOrder),
+              }
+            : { name: "", displayOrder: String(nextOrder(topicRows)) }
+        }
+        loading={createTopic.isPending || updateTopic.isPending}
+        onSubmit={(values, close) => {
+          const name = values.name.trim();
+          const displayOrder = Number(values.displayOrder) || 0;
+
+          if (editing?.level === "topic" && editing.record) {
+            updateTopic.mutate(
+              { id: editing.record.id, data: { name, displayOrder } },
+              {
+                onSuccess: () => {
+                  toast.success("Topic updated", name);
+                  close();
+                },
+                onError: (error) => toast.fromError(error, "Could not update the topic"),
+              },
+            );
+          } else if (selectedChapter) {
+            createTopic.mutate(
+              { chapterId: selectedChapter.id, name, displayOrder },
+              {
+                onSuccess: (topic) => {
+                  toast.success("Topic created", topic.name);
+                  setTopicId(topic.id);
+                  close();
+                },
+                onError: (error) => toast.fromError(error, "Could not create the topic"),
+              },
+            );
+          }
+        }}
+      />
+
       {/* ── Subtopic form ────────────────────────────────────────────────── */}
       <EntityModal
         open={editing?.level === "subtopic"}
@@ -613,7 +817,11 @@ export default function SyllabusPage() {
         title={
           editing?.level === "subtopic" && editing.record ? "Edit subtopic" : "Add subtopic"
         }
-        description={selectedChapter ? `Inside ${selectedChapter.name}` : undefined}
+        description={
+          selectedTopic && selectedChapter
+            ? `Inside ${selectedChapter.name} › ${selectedTopic.name}`
+            : undefined
+        }
         fields={[
           { key: "name", label: "Subtopic name", required: true, placeholder: "Quadratic Equations" },
           { key: "displayOrder", label: "Display order", type: "number" },
@@ -642,9 +850,9 @@ export default function SyllabusPage() {
                 onError: (error) => toast.fromError(error, "Could not update the subtopic"),
               },
             );
-          } else if (selectedChapter) {
+          } else if (selectedTopic) {
             createSubtopic.mutate(
-              { chapterId: selectedChapter.id, name, displayOrder },
+              { topicId: selectedTopic.id, name, displayOrder },
               {
                 onSuccess: () => {
                   toast.success("Subtopic created", name);

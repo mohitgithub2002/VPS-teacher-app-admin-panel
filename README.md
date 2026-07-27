@@ -90,10 +90,10 @@ matches what the backend actually said:
 | `/teachers/[id]` | `teachers/{id}`, `assignments`, `attendance`, `sessions`, `pacing` | Profile, activate/deactivate, password reset, assignments, recent sessions |
 | `/assignments` | `assignments` | Teacher × classroom × subject, create and deactivate |
 | `/attendance` | `attendance` | Mark a whole day, then correct records from history |
-| `/syllabus` | `subjects`, `chapters`, `subtopics` | Three-pane subject → chapter → subtopic builder with full CRUD |
+| `/syllabus` | `subjects`, `chapters`, `topics`, `subtopics` | Four-pane subject → chapter → topic → subtopic builder with full CRUD |
 | `/progress` | `dashboard/progress` | Classroom × subject completion matrix, plus a detail table |
 | `/test-coverage` | `dashboard/test-coverage` | Test and revision frequency; flags never-tested chapters |
-| `/unmarked` | `dashboard/unmarked` | Subtopics never completed anywhere, grouped by chapter |
+| `/unmarked` | `dashboard/unmarked` | Subtopics never completed anywhere, grouped by topic |
 | `/calendar` | `calendar`, `calendar/effective-days` | Holiday/exam/event editor and a teaching-days calculator |
 | `/timetable` | `timetable`, `assignments` | Weekly grid by classroom or by teacher; clashes rejected upstream |
 | `/sessions` | `sessions`, `sessions/{id}` | Cross-teacher session browser, topic detail drawer, admin delete |
@@ -151,7 +151,7 @@ never scrolls sideways.
 
 `src/server/mock/` implements the documented API against a deterministic
 dataset: 15 teachers, 5 classes with sections, 8 subjects, 200 chapters with
-subtopics, 54 assignments, a 270-slot timetable, ~45 days of session logs,
+topics and subtopics, 54 assignments, a 270-slot timetable, ~45 days of session logs,
 attendance, calendar events and an audit trail. It honours the response
 envelope, the documented status codes, pagination, soft deletes, upsert
 attendance, timetable clash detection and pacing recalculation, and it writes

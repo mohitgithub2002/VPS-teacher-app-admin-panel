@@ -137,15 +137,28 @@ export interface Chapter {
   isActive: boolean;
   subject: Pick<Subject, "id" | "name">;
   class: SchoolClass;
-  _count?: { subtopics: number };
+  _count?: { topics: number };
 }
 
-export interface Subtopic {
+export interface Topic {
   id: number;
   chapterId: number;
   name: string;
   displayOrder: number;
   isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  _count?: { subtopics: number };
+}
+
+export interface Subtopic {
+  id: number;
+  topicId: number;
+  name: string;
+  displayOrder: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 /* ── Calendar ────────────────────────────────────────────────────────────── */
@@ -219,11 +232,15 @@ export interface UnmarkedSubtopic {
   id: number;
   name: string;
   displayOrder: number;
-  chapter: {
+  topic: {
     id: number;
     name: string;
-    subject: Pick<Subject, "id" | "name">;
-    class: SchoolClass;
+    chapter: {
+      id: number;
+      name: string;
+      subject: Pick<Subject, "id" | "name">;
+      class: SchoolClass;
+    };
   };
 }
 

@@ -144,7 +144,7 @@ export default function AuditLogsPage() {
           fieldClassName="wk-toolbar__field"
         >
           <option value="">All entities</option>
-          {["Teacher", "TeacherAssignment", "CalendarEvent", "TeacherAttendance", "SessionLog", "Subject", "Chapter", "Subtopic", "TimetableSlot"].map(
+          {["Teacher", "TeacherAssignment", "CalendarEvent", "TeacherAttendance", "SessionLog", "Subject", "Chapter", "Topic", "Subtopic", "TimetableSlot"].map(
             (value) => (
               <option key={value} value={value}>
                 {value}
